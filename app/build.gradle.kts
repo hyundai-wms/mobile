@@ -1,6 +1,7 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
+//    id("androidx.navigation.safeargs.kotlin")
 }
 
 android {
@@ -48,6 +49,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.viewmodel.ktx)
     implementation(libs.androidx.navigation.fragment.ktx)
     implementation(libs.androidx.navigation.ui.ktx)
+    implementation(libs.androidx.activity)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
@@ -58,4 +60,8 @@ dependencies {
     implementation ("androidx.camera:camera-view:1.1.0")
 
     implementation ("com.google.mlkit:barcode-scanning:17.0.3")
+
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+    implementation ("com.journeyapps:zxing-android-embedded:4.3.0")
+
 }

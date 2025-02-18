@@ -1,28 +1,26 @@
 package com.myme.qrapp.ui.home
 
-import android.annotation.SuppressLint
-import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.os.Bundle
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Button
 import androidx.annotation.OptIn
 import androidx.camera.core.*
 import androidx.camera.lifecycle.ProcessCameraProvider
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
+import androidx.fragment.app.activityViewModels
+import androidx.navigation.fragment.findNavController
 import com.google.mlkit.vision.barcode.BarcodeScannerOptions
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.common.InputImage
+import com.myme.qrapp.databinding.FragmentHomeBinding
 import java.util.concurrent.ExecutorService
 import java.util.concurrent.Executors
 import com.google.mlkit.vision.barcode.common.Barcode
-import com.myme.qrapp.databinding.FragmentHomeBinding
-import com.myme.qrapp.ui.QrCodeDialogFragment
-import java.io.File
+import com.myme.qrapp.R
+import com.myme.qrapp.SharedViewModel
 
 class HomeFragment : Fragment() {
 
@@ -33,6 +31,9 @@ class HomeFragment : Fragment() {
     private lateinit var cameraProvider: ProcessCameraProvider
     private var isQrScanningActive = false
 
+    // SharedViewModel을 activityViewModels로 가져오기
+    private val sharedViewModel: SharedViewModel by activityViewModels()
+
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
@@ -40,16 +41,14 @@ class HomeFragment : Fragment() {
         _binding = FragmentHomeBinding.inflate(inflater, container, false)
         cameraExecutor = Executors.newSingleThreadExecutor()
 
-        // 카메라 시작
         startCamera()
 
-        // QR 코드 인식 버튼 클릭 시 처리
         binding.startQrScanButton.setOnClickListener {
-            isQrScanningActive = !isQrScanningActive  // QR 코드 스캔 활성화 상태 변경
+            isQrScanningActive = !isQrScanningActive
             if (isQrScanningActive) {
-                startQrCodeScanning()  // QR 코드 인식 시작
+                startQrCodeScanning()
             } else {
-                stopQrCodeScanning()   // QR 코드 인식 중지
+                stopQrCodeScanning()
             }
         }
 
@@ -65,54 +64,42 @@ class HomeFragment : Fragment() {
                 it.setSurfaceProvider(binding.cameraView.surfaceProvider)
             }
 
-            // ImageAnalysis 설정
-            imageAnalysis = ImageAnalysis.Builder()
-                .build()
+            imageAnalysis = ImageAnalysis.Builder().build()
             imageAnalysis.setAnalyzer(cameraExecutor, QRCodeAnalyzer())
 
             val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
 
             try {
                 cameraProvider.unbindAll()
-                cameraProvider.bindToLifecycle(
-                    this, cameraSelector, preview, imageAnalysis
-                )
+                cameraProvider.bindToLifecycle(this, cameraSelector, preview, imageAnalysis)
             } catch (exc: Exception) {
-                Log.e("CameraFragment", "카메라 바인딩 실패: ${exc.message}")
+                Log.e("HomeFragment", "카메라 바인딩 실패: ${exc.message}")
             }
 
         }, ContextCompat.getMainExecutor(requireContext()))
     }
 
     private fun startQrCodeScanning() {
-        Log.d("CameraFragment", "QR 코드 스캔 시작")
-        // QR 코드 인식이 활성화되면 다시 바인딩
+        Log.d("HomeFragment", "QR 코드 스캔 시작")
         val cameraSelector = CameraSelector.DEFAULT_BACK_CAMERA
 
         try {
             cameraProvider.unbindAll()
-
-            // Preview 설정
             val preview = Preview.Builder().build().also {
                 it.setSurfaceProvider(binding.cameraView.surfaceProvider)
             }
 
-            // QR 코드 인식 ImageAnalysis 바인딩
-            cameraProvider.bindToLifecycle(
-                this, cameraSelector, preview, imageAnalysis
-            )
+            cameraProvider.bindToLifecycle(this, cameraSelector, preview, imageAnalysis)
         } catch (exc: Exception) {
-            Log.e("CameraFragment", "카메라 바인딩 실패: ${exc.message}")
+            Log.e("HomeFragment", "카메라 바인딩 실패: ${exc.message}")
         }
     }
 
     private fun stopQrCodeScanning() {
-        Log.d("CameraFragment", "QR 코드 스캔 중지")
-        // QR 코드 인식이 비활성화되면 ImageAnalysis를 unbind하여 중지
+        Log.d("HomeFragment", "QR 코드 스캔 중지")
         cameraProvider.unbind(imageAnalysis)
     }
 
-    // QR 코드 인식 분석기
     private inner class QRCodeAnalyzer : ImageAnalysis.Analyzer {
         @OptIn(ExperimentalGetImage::class)
         override fun analyze(imageProxy: ImageProxy) {
@@ -133,16 +120,28 @@ class HomeFragment : Fragment() {
                     .addOnSuccessListener { barcodes ->
                         for (barcode in barcodes) {
                             barcode.rawValue?.let { qrCodeValue ->
-                                Log.d("CameraFragment", "QR 코드 인식 성공: $qrCodeValue")
-                                //TODO:  QR 코드 인식 후 다이얼로그 띄우기 (여기 부분 수정 하면 됨)
-                                if (parentFragmentManager.findFragmentByTag("QrCodeDialog") == null) {
-                                    QrCodeDialogFragment(qrCodeValue).show(parentFragmentManager, "QrCodeDialog")
+                                Log.d("HomeFragment", "QR 코드 인식 성공: $qrCodeValue")
+
+                                // QR 코드 데이터를 ViewModel에 저장
+                                sharedViewModel.setQrCodeValue(qrCodeValue)
+
+                                // QR 코드 인식 후 DashboardFragment로 전환
+                                val bundle = Bundle().apply {
+                                    putString("qrCodeValue", qrCodeValue)  // QR 코드 값 전달
+                                }
+
+                                findNavController().apply {
+                                    // 이전 Fragment를 백스택에서 제거
+                                    popBackStack()
+
+                                    // DashboardFragment로 네비게이션
+                                    navigate(R.id.navigation_dashboard)
                                 }
                             }
                         }
                     }
                     .addOnFailureListener { e ->
-                        Log.e("CameraFragment", "QR 코드 인식 실패: ${e.message}")
+                        Log.e("HomeFragment", "QR 코드 인식 실패: ${e.message}")
                     }
                     .addOnCompleteListener {
                         imageProxy.close()
