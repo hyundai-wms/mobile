@@ -119,7 +119,6 @@ class DashboardFragment : Fragment() {
         val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
         val selectedDate = dateFormat.format(Date())
 
-        // JSON 바디 생성
         val json = """{"selectedDate":"$selectedDate"}"""
         val requestBody = json.toRequestBody("application/json".toMediaType())
 

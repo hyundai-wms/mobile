@@ -93,7 +93,7 @@ class LoginActivity : AppCompatActivity() {
                             Log.d("chk", "${name} ")
                         }
                         Toast.makeText(applicationContext, "Login successful", Toast.LENGTH_SHORT).show()
-                        startActivity(Intent(this@LoginActivity, MainActivity::class.java))
+                        startActivity(Intent(this@LoginActivity, SelectActivity::class.java))
                         finish()
                     } else {
                         Toast.makeText(applicationContext, "Login failed: ${response.message}", Toast.LENGTH_SHORT).show()

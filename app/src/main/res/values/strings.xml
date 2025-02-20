@@ -7,4 +7,6 @@
     <string name="text_return">반품</string>
     <!-- TODO: Remove or change this placeholder text -->
     <string name="hello_blank_fragment">Hello blank fragment</string>
+    <string name="enterOutbound">출고 처리</string>
+    <string name="enterInbound">입고 처리</string>
 </resources>
