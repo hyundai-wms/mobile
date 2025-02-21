@@ -15,14 +15,14 @@ class MyCookieJar : CookieJar {
     }
 
     override fun saveFromResponse(url: HttpUrl, cookies: List<Cookie>) {
-        Log.d("cookie1","${cookies}")
+
         val domain = url.host
         cookieStore[domain] = cookies
     }
 
     override fun loadForRequest(url: HttpUrl): List<Cookie> {
         val domain = url.host
-        Log.d("cookie2","${cookieStore[domain]} ${url}")
+
         return cookieStore[domain] ?: emptyList()
     }
 }

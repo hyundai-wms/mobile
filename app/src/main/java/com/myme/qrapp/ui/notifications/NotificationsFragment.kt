@@ -4,6 +4,7 @@ import com.myme.qrapp.QRCodeActivity
 import android.app.DatePickerDialog
 import android.content.Intent
 import android.os.Bundle
+import android.os.StrictMode
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
@@ -23,6 +24,8 @@ import org.json.JSONObject
 import java.io.IOException
 import java.util.*
 import android.widget.TableRow
+import androidx.lifecycle.ViewModelProvider
+import com.myme.qrapp.SharedViewModel
 
 
 class NotificationsFragment : Fragment() {
@@ -30,16 +33,17 @@ class NotificationsFragment : Fragment() {
     private lateinit var selectedDate: String
     private lateinit var selectDateButton: Button
     private lateinit var selectedDateTextView: TextView
+    private lateinit var sharedViewModel: SharedViewModel
     private lateinit var root : View
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
         root = inflater.inflate(R.layout.fragment_notifications, container, false)
-
+        sharedViewModel = ViewModelProvider(requireActivity()).get(SharedViewModel::class.java)
         selectDateButton = root.findViewById(R.id.selectDateButton)
         selectedDateTextView = root.findViewById(R.id.selectedDateTextView)
-
+        StrictMode.enableDefaults()
         selectDateButton.setOnClickListener {
             showDatePickerDialog()
         }
@@ -59,18 +63,21 @@ class NotificationsFragment : Fragment() {
                 val formattedDate = String.format("%04d-%02d-%02d", selectedYear, selectedMonth + 1, selectedDay)
                 selectedDate = formattedDate
                 selectedDateTextView.text = "Selected Date: $formattedDate"
+                if(sharedViewModel.isInbound.value == false){
+                    val url = "https://api.mywareho.me/v1/storages/issues/plans?issuePlanStartDate=$selectedDate&issuePlanEndDate=$selectedDate"
+                    sendRequestWithSelectedDate(url)
+                }else{
+                    val url = "https://api.mywareho.me/v1/storages/receipts/plans?receiptPlanStartDate=$selectedDate&receiptPlanEndDate=$selectedDate"
+                    sendRequestWithSelectedDate(url)
+                }
 
-                // 선택된 날짜를 요청에 포함하여 서버에 전송
-                sendRequestWithSelectedDate(selectedDate)
             },
             year, month, dayOfMonth
         )
         datePickerDialog.show()
     }
 
-    private fun sendRequestWithSelectedDate(selectedDate: String) {
-        // 쿼리 파라미터로 selectedDate를 URL에 추가
-        val url = "https://api.mywareho.me/v1/storages/receipts/plans?receiptPlanStartDate=$selectedDate&receiptPlanEndDate=$selectedDate"
+    private fun sendRequestWithSelectedDate(url : String) {
 
         // OkHttpClient에 CookieJar를 설정하여 쿠키를 관리
         val client = OkHttpClient.Builder()
@@ -87,9 +94,7 @@ class NotificationsFragment : Fragment() {
             override fun onFailure(call: okhttp3.Call, e: IOException) {
                 // 요청 실패 처리
                 Log.e("Error", "Request failed: ${e.message}")
-                requireActivity().runOnUiThread {
-                    Toast.makeText(requireContext(), "Request failed: ${e.message}", Toast.LENGTH_SHORT).show()
-                }
+
             }
 
             override fun onResponse(call: okhttp3.Call, response: Response) {
@@ -97,12 +102,16 @@ class NotificationsFragment : Fragment() {
                     if (response.isSuccessful) {
                         // 응답 처리
 //                        Log.d("chk", "Response: ${response.body?.string()}")
-                        response.body?.string()?.let { displayReceiptPlans(it) }
-                        Toast.makeText(requireContext(), "Request successful", Toast.LENGTH_SHORT).show()
+                        if(sharedViewModel.isInbound.value == true){
+                            response.body?.string()?.let { displayReceiptPlans(it) }
+                        } else{
+                            response.body?.string()?.let { displayReceiptPlans(it) }
+                        }
+
+
                     } else {
                         // 오류 처리
                         Log.d("chk", "Error response: ${response.body?.string()}")
-                        Toast.makeText(requireContext(), "Error: ${response.message}", Toast.LENGTH_SHORT).show()
                     }
                 }
             }
@@ -119,33 +128,59 @@ class NotificationsFragment : Fragment() {
 
         for (i in 0 until content.length()) {
             val item = content.getJSONObject(i)
-            val receiptPlanCode = item.getString("receiptPlanCode")
-            val receiptPlanId = item.getString("receiptPlanId")
-            val productNumber = item.getString("productNumber")
-            val productName = item.getString("productName")
-            val itemCount = item.getInt("itemCount")
+            if(sharedViewModel.isInbound.value==true){
+                val receiptPlanCode = item.getString("receiptPlanCode")
+                val receiptPlanId = item.getString("receiptPlanId")
+                val productNumber = item.getString("productNumber")
+                val productName = item.getString("productName")
+                val itemCount = item.getInt("itemCount")
 
-            // 행 생성
-            val tableRow = TableRow(requireContext())
+                // 행 생성
+                val tableRow = TableRow(requireContext())
 
-            // 각 셀에 텍스트 추가
-            val productNumberTextView = TextView(requireContext()).apply { text = productNumber }
-            val productNameTextView = TextView(requireContext()).apply { text = productName }
-            val itemCountTextView = TextView(requireContext()).apply { text = itemCount.toString() }
+                // 각 셀에 텍스트 추가
+                val productNumberTextView = TextView(requireContext()).apply { text = productNumber }
+                val productNameTextView = TextView(requireContext()).apply { text = productName }
+                val itemCountTextView = TextView(requireContext()).apply { text = itemCount.toString() }
 
-            // 클릭 이벤트 추가: 셀 클릭 시 QR 코드 생성 화면으로 이동
-            tableRow.setOnClickListener {
-                val intent = Intent(requireContext(), QRCodeActivity::class.java)
-                intent.putExtra("receiptPlanCode", receiptPlanCode)
-                intent.putExtra("itemCount", itemCount)
-                intent.putExtra("receiptPlanId",receiptPlanId)
-                startActivity(intent)
+                // 클릭 이벤트 추가: 셀 클릭 시 QR 코드 생성 화면으로 이동
+//            if(sharedViewModel.isInbound.value == true) {
+//
+//            }
+                tableRow.setOnClickListener {
+                    val intent = Intent(requireContext(), QRCodeActivity::class.java)
+                    intent.putExtra("receiptPlanCode", receiptPlanCode)
+                    intent.putExtra("itemCount", itemCount)
+                    intent.putExtra("receiptPlanId",receiptPlanId)
+                    startActivity(intent)
+                }
+
+                tableRow.addView(productNumberTextView)
+                tableRow.addView(productNameTextView)
+                tableRow.addView(itemCountTextView)
+                tableLayout.addView(tableRow)
+            } else{
+                val issuePlanCode = item.getString("issuePlanCode")
+                val issuePlanId = item.getString("issuePlanId")
+                val productNumber = item.getString("productNumber")
+                val productName = item.getString("productName")
+                val itemCount = item.getInt("itemCount")
+
+                // 행 생성
+                val tableRow = TableRow(requireContext())
+
+                // 각 셀에 텍스트 추가
+                val productNumberTextView = TextView(requireContext()).apply { text = productNumber }
+                val productNameTextView = TextView(requireContext()).apply { text = productName }
+                val itemCountTextView = TextView(requireContext()).apply { text = itemCount.toString() }
+
+
+                tableRow.addView(productNumberTextView)
+                tableRow.addView(productNameTextView)
+                tableRow.addView(itemCountTextView)
+                tableLayout.addView(tableRow)
             }
 
-            tableRow.addView(productNumberTextView)
-            tableRow.addView(productNameTextView)
-            tableRow.addView(itemCountTextView)
-            tableLayout.addView(tableRow)
         }
     }
 }

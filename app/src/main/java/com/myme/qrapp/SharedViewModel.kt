@@ -5,7 +5,7 @@ import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 
 class SharedViewModel : ViewModel() {
-    val qrCodeLiveData = MutableLiveData<String>()
+    val qrCodeLiveData = MutableLiveData<String>("")
 
     val isInbound = MutableLiveData<Boolean>()
 

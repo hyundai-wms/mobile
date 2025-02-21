@@ -36,7 +36,7 @@ class QRCodeActivity : AppCompatActivity() {
 
     private fun generateQRCode(data: String): BitMatrix {
         val writer = QRCodeWriter()
-        return writer.encode(data, BarcodeFormat.QR_CODE, 215, 216)
+        return writer.encode(data, BarcodeFormat.QR_CODE, 216, 216)
     }
 
     private fun bitmapFromMatrix(matrix: BitMatrix): Bitmap {

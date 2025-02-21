@@ -8,8 +8,16 @@
     android:orientation="vertical"
     tools:context=".ui.dashboard.DashboardFragment">
 
+    <TextView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/noInfoTextView"
+        android:textSize="20sp"
+        android:text="@string/onQrInfo"
+        />
     <!-- 상단 정보 레이아웃 (가변 크기 적용) -->
     <LinearLayout
+        android:id="@+id/infoLayout"
         android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1"
@@ -20,6 +28,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content">
             <TextView android:text="입고 예정 코드"
+                android:id="@+id/planCodeText"
                 android:layout_height="wrap_content"
                 android:textSize="20sp"
                 android:layout_width="200dp"/>
@@ -95,6 +104,7 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content">
             <TextView android:text="입고 예정 일자"
+                android:id="@+id/planDateText"
                 android:textSize="20sp"
                 android:layout_height="wrap_content"
                 android:layout_width="200dp"/>
@@ -104,6 +114,24 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"/>
         </LinearLayout>
+
+        <LinearLayout
+            android:id="@+id/bayLayout"
+            android:visibility="gone"
+            android:orientation="horizontal"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content">
+            <TextView android:text="적재 위치"
+                android:textSize="20sp"
+                android:layout_height="wrap_content"
+                android:layout_width="200dp"/>
+            <TextView
+                android:textSize="20sp"
+                android:id="@+id/bayNumber"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"/>
+        </LinearLayout>
+
     </LinearLayout>
 
     <LinearLayout
