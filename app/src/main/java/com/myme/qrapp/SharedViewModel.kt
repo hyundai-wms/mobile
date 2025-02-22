@@ -9,6 +9,8 @@ class SharedViewModel : ViewModel() {
 
     val isInbound = MutableLiveData<Boolean>()
 
+    val planId = MutableLiveData<String>("")
+
     fun setQrCodeValue(qrCodeValue: String) {
         qrCodeLiveData.value = qrCodeValue
         Log.d("chk","${qrCodeLiveData.value} ${qrCodeValue}")
@@ -16,5 +18,9 @@ class SharedViewModel : ViewModel() {
 
     fun setIsInbound(checkInbound : Boolean){
         isInbound.value = checkInbound
+    }
+
+    fun setPlanId(id : String){
+        planId.value = id
     }
 }

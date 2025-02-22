@@ -2,6 +2,7 @@ package com.myme.qrapp
 
 import android.content.Intent
 import android.os.Bundle
+import android.os.StrictMode
 import android.util.Log
 import android.widget.Button
 import android.widget.EditText
@@ -26,7 +27,7 @@ class LoginActivity : AppCompatActivity() {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_login)
         supportActionBar?.hide()
-
+        StrictMode.enableDefaults()
         // Find views
         usernameEditText = findViewById(R.id.usernameEditText)
         passwordEditText = findViewById(R.id.passwordEditText)
@@ -74,27 +75,30 @@ class LoginActivity : AppCompatActivity() {
             override fun onResponse(call: Call, response: Response) {
                 runOnUiThread {
                     if (response.isSuccessful) {
-//                        val cookies = response.headers("Set-Cookie") // Set-Cookie 헤더 값 가져오기
-//
-////                        var sessionId: String? = null
-////
-////                        for (cookie in cookies) {
-////                            if (cookie.startsWith("JSESSIONID") || cookie.startsWith("SESSIONID")) {
-////                                sessionId = cookie.split(";")[0] // "JSESSIONID=abcd1234; Path=/; HttpOnly" → "JSESSIONID=abcd1234"
-////                                break
-////                            }
-////                        }
-//                        response.body?.string()?.let { responseBody ->
-//                            val jsonObject = JSONObject(responseBody)
-//                            val userId = jsonObject.getInt("userId")
-//                            val name = jsonObject.getString("name")
-//                            val phoneNumber = jsonObject.getString("phoneNumber")
-//                            val id = jsonObject.getString("id")
-//                            val role = jsonObject.getString("role")
-//                            Log.d("chk", "${name} ")
-//                        }
-                        Toast.makeText(applicationContext, "Login successful", Toast.LENGTH_SHORT).show()
-                        startActivity(Intent(this@LoginActivity, SelectActivity::class.java))
+                        val responseBody = response.body?.string() // 🔹 한 번만 호출
+
+                        responseBody?.let { Log.d("chk", it) }  // ✅ 응답 로그 출력
+
+                        val intent = Intent(this@LoginActivity, SelectActivity::class.java)
+
+                        // 🔹 JSON 파싱 후 데이터를 `Intent`로 전달
+                        responseBody?.let {
+                            try {
+                                val jsonObject = JSONObject(it)
+                                val name = jsonObject.getString("name")  // 사용자 이름
+                                val userId = jsonObject.getInt("userId")  // 사용자 ID
+                                val phoneNumber = jsonObject.getString("phoneNumber")  // 전화번호
+                                val id = jsonObject.getString("id")  // 로그인 ID
+                                val role = jsonObject.getString("role")  // 사용자 역할
+                                intent.putExtra("userName",name)
+                                Log.d("chk", "userName: $name, userId: $userId, phoneNumber: $phoneNumber, id: $id, role: $role")
+                            } catch (e: Exception) {
+                                Log.e("chk", "JSON 파싱 오류: ${e.message}")
+                            }
+                        }
+
+                        Toast.makeText(applicationContext, "로그인 되었습니다!", Toast.LENGTH_SHORT).show()
+                        startActivity(intent)
                         finish()
                     } else {
                         Toast.makeText(applicationContext, "Login failed: ${response.message}", Toast.LENGTH_SHORT).show()

@@ -1,8 +1,10 @@
 package com.myme.qrapp.ui.notifications
 
+import android.app.AlertDialog
 import com.myme.qrapp.QRCodeActivity
 import android.app.DatePickerDialog
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.os.StrictMode
 import android.util.Log
@@ -24,8 +26,13 @@ import org.json.JSONObject
 import java.io.IOException
 import java.util.*
 import android.widget.TableRow
+import androidx.annotation.RequiresApi
+import androidx.fragment.app.activityViewModels
 import androidx.lifecycle.ViewModelProvider
+import androidx.navigation.fragment.findNavController
 import com.myme.qrapp.SharedViewModel
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 
 
 class NotificationsFragment : Fragment() {
@@ -33,21 +40,29 @@ class NotificationsFragment : Fragment() {
     private lateinit var selectedDate: String
     private lateinit var selectDateButton: Button
     private lateinit var selectedDateTextView: TextView
-    private lateinit var sharedViewModel: SharedViewModel
+    private val sharedViewModel: SharedViewModel by activityViewModels()
     private lateinit var root : View
+    @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
         root = inflater.inflate(R.layout.fragment_notifications, container, false)
-        sharedViewModel = ViewModelProvider(requireActivity()).get(SharedViewModel::class.java)
+
         selectDateButton = root.findViewById(R.id.selectDateButton)
         selectedDateTextView = root.findViewById(R.id.selectedDateTextView)
         StrictMode.enableDefaults()
         selectDateButton.setOnClickListener {
             showDatePickerDialog()
         }
-
+        if(sharedViewModel.isInbound.value == false){
+            val today = LocalDate.now() // 현재 날짜 가져오기
+            val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd") // 포맷 지정
+            val formattedDate = today.format(formatter) // 날짜를 문자열로 변환
+            val url = "https://api.mywareho.me/v1/storages/issues/plans?issuePlanStartDate=$formattedDate&issuePlanEndDate=$formattedDate"
+            sendRequestWithSelectedDate(url)
+        }
+        Log.d("chk","!!!!!!!!!!")
         return root
     }
 
@@ -70,7 +85,6 @@ class NotificationsFragment : Fragment() {
                     val url = "https://api.mywareho.me/v1/storages/receipts/plans?receiptPlanStartDate=$selectedDate&receiptPlanEndDate=$selectedDate"
                     sendRequestWithSelectedDate(url)
                 }
-
             },
             year, month, dayOfMonth
         )
@@ -179,6 +193,21 @@ class NotificationsFragment : Fragment() {
                 tableRow.addView(productNameTextView)
                 tableRow.addView(itemCountTextView)
                 tableLayout.addView(tableRow)
+
+                tableRow.setOnClickListener {
+                    AlertDialog.Builder(requireContext())
+                        .setTitle("출고 진행")
+                        .setMessage("출고를 진행하시겠습니까?")
+                        .setPositiveButton("확인") { _, _ ->
+                            // ViewModel에 issuePlanId 저장
+                            sharedViewModel.setPlanId(issuePlanId)
+
+                            // HomeFragment로 이동
+                            findNavController().navigate(R.id.action_navigation_notifications_to_navigation_home)
+                        }
+                        .setNegativeButton("취소", null) // 취소 버튼
+                        .show()
+                }
             }
 
         }

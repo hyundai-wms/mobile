@@ -1,21 +1,29 @@
 package com.myme.qrapp
 
 import android.content.Intent
+import android.os.Build
 import android.os.Bundle
 import android.util.Log
 import androidx.activity.enableEdgeToEdge
+import androidx.annotation.RequiresApi
 import androidx.appcompat.app.AppCompatActivity
 import com.myme.qrapp.databinding.ActivitySelectBinding
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
 
 class SelectActivity : AppCompatActivity() {
     private lateinit var binding: ActivitySelectBinding
+    @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         binding = ActivitySelectBinding.inflate(layoutInflater)
         setContentView(binding.root)
         supportActionBar?.hide()
-        val intent = Intent(this@SelectActivity, MainActivity::class.java)
 
+        val userName = intent.getStringExtra("userName")
+        val intent = Intent(this@SelectActivity, MainActivity::class.java)
+        Log.d("chk","$userName")
+        binding.welcomeText.text ="환영합니다 ${userName} 님"
         binding.btnEnterInbound.setOnClickListener {
             intent.putExtra("isInbound",true)
             startActivity(intent)

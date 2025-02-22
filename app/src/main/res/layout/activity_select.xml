@@ -6,32 +6,45 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
+    android:layout_gravity="center"
     android:gravity="center"
     tools:context=".SelectActivity">
 
-    <ImageView  android:layout_height="wrap_content" android:layout_width="wrap_content"/>
-
+    <ImageView  android:src="@drawable/logo" android:layout_height="wrap_content" android:layout_width="wrap_content" android:layout_marginBottom="60dp"/>
+    <TextView
+        android:layout_marginBottom="350dp"
+        android:textSize="24sp"
+        android:textAlignment="center"
+        android:id="@+id/welcomeText"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content" />
     <LinearLayout
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="horizontal"
         android:gravity="center">
         <TextView
+            android:textAlignment="center"
+            android:background="@drawable/roundedview"
+            android:textColor="@color/white"
             android:id="@+id/btn_enter_inbound"
-            android:layout_width="wrap_content"
+            android:layout_width="130dp"
             android:layout_height="wrap_content"
             android:text="@string/enterInbound"
-            android:textSize="16sp"
+            android:textSize="20sp"
             android:textStyle="bold" />
         <Space
             android:layout_width="30dp"
             android:layout_height="wrap_content"/>
         <TextView
+            android:textColor="@color/white"
+            android:textAlignment="center"
+            android:background="@drawable/roundedview"
             android:id="@+id/btn_enter_outbound"
-            android:layout_width="wrap_content"
+            android:layout_width="130dp"
             android:layout_height="wrap_content"
             android:text="@string/enterOutbound"
-            android:textSize="16sp"
+            android:textSize="20sp"
             android:textStyle="bold" />
     </LinearLayout>
 

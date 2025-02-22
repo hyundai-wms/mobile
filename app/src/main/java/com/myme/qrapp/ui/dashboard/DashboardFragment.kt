@@ -60,7 +60,7 @@ class DashboardFragment : Fragment() {
 
         // LiveData 관찰
         sharedViewModel.qrCodeLiveData.observe(viewLifecycleOwner) { qrCodeData ->
-
+            Log.d("chk","$qrCodeData")
             if(qrCodeData==""){
                 binding.noInfoTextView.visibility = View.VISIBLE
                 binding.infoLayout.visibility = View.GONE
@@ -285,58 +285,62 @@ class DashboardFragment : Fragment() {
     }
     //TODO: 출고 작업 url만 맞추고 그 이후로는 다시 맞춰야댐
     private fun OutboundProduct(itemId: String) {
-        Log.d("chk","hiee")
+        Log.d("chk","$itemId")
         val url1 = "https://api.mywareho.me/v1/storages/inventories/items/${itemId}"
-        var issuePlanId = ""
+        var issuePlanId = sharedViewModel.planId.value
         // OkHttpClient에 CookieJar를 설정하여 쿠키를 관리
         val client1 = OkHttpClient.Builder()
             .cookieJar(MyCookieJar.INSTANCE)
             .build()
-
-        val request1 = Request.Builder()
-            .url(url1) // 이미 쿼리 파라미터가 추가된 URL
-            .get() // GET 방식으로 요청 (post를 사용하지 않고 쿼리 파라미터를 사용하면 GET 요청이 일반적)
-            .addHeader("Content-Type", "application/json") // JSON 형식의 Content-Type 설정 (선택사항)
-            .build()
-
-        client1.newCall(request1).enqueue(object : okhttp3.Callback {
-            override fun onFailure(call: okhttp3.Call, e: IOException) {
-                // 요청 실패 처리
-                Log.e("Error", "Request failed: ${e.message}")
-                requireActivity().runOnUiThread {
-                    Toast.makeText(requireContext(), "Request failed: ${e.message}", Toast.LENGTH_SHORT).show()
-                }
-            }
-            override fun onResponse(call: okhttp3.Call, response: Response) {
-                requireActivity().runOnUiThread {
-                    if (response.isSuccessful) {
-                        // 응답 본문을 문자열로 받음
-                        val responseBody = response.body?.string()
-                        Log.d("chk", "Response: $responseBody")
-
-                        // JSONObject로 응답 파싱
-                        try {
-                            val jsonObject = JSONObject(responseBody)
-
-                            // "issuePlanId" 필드 추출
-                            issuePlanId = jsonObject.optString("issuePlanId")
-                            Log.d("chk", "issuePlanId: $issuePlanId")
-
-                            // issuePlanId 사용
-                            // 예: displayItem(issuePlanId)
-                            displayItem(issuePlanId)
-                        } catch (e: Exception) {
-                            Log.e("Error", "JSON parsing error: ${e.message}")
-                            Toast.makeText(requireContext(), "JSON parsing error", Toast.LENGTH_SHORT).show()
-                        }
-                    } else {
-                        // 오류 처리
-                        val errorBody = response.body?.string()
-                        Toast.makeText(requireContext(), "Request failed: $errorBody", Toast.LENGTH_SHORT).show()
-                    }
-                }
-            }
-        })
+        val planId = sharedViewModel.planId.value
+        val jsonPlanId = """{"issuePlanId": "$planId"}"""  // JSON 문자열 생성
+        Log.d("chk","hey $planId")
+        val requestBodywithPlanId = jsonPlanId.toRequestBody("application/json".toMediaType()) // JSON을 RequestBody로 변환
+        Log.d("chk","hey2 $requestBodywithPlanId $jsonPlanId")
+//        val request1 = Request.Builder()
+//            .url(url1) // 이미 쿼리 파라미터가 추가된 URL
+//            .post(requestBodywithPlanId) // GET 방식으로 요청 (post를 사용하지 않고 쿼리 파라미터를 사용하면 GET 요청이 일반적)
+//            .addHeader("Content-Type", "application/json") // JSON 형식의 Content-Type 설정 (선택사항)
+//            .build()
+//
+//        client1.newCall(request1).enqueue(object : okhttp3.Callback {
+//            override fun onFailure(call: okhttp3.Call, e: IOException) {
+//                // 요청 실패 처리
+//                Log.e("Error", "Request failed: ${e.message}")
+//                requireActivity().runOnUiThread {
+//                    Toast.makeText(requireContext(), "Request failed: ${e.message}", Toast.LENGTH_SHORT).show()
+//                }
+//            }
+//            override fun onResponse(call: okhttp3.Call, response: Response) {
+//                requireActivity().runOnUiThread {
+//                    if (response.isSuccessful) {
+//                        // 응답 본문을 문자열로 받음
+//                        val responseBody = response.body?.string()
+//                        Log.d("chk", "Response: $responseBody")
+//
+//                        // JSONObject로 응답 파싱
+//                        try {
+//                            val jsonObject = JSONObject(responseBody)
+//
+//                            // "issuePlanId" 필드 추출
+//                            issuePlanId = jsonObject.optString("issuePlanId")
+//                            Log.d("chk", "issuePlanId: $issuePlanId")
+//
+//                            // issuePlanId 사용
+//                            // 예: displayItem(issuePlanId)
+//                            displayItem(issuePlanId)
+//                        } catch (e: Exception) {
+//                            Log.e("Error", "JSON parsing error: ${e.message}")
+//                            Toast.makeText(requireContext(), "JSON parsing error", Toast.LENGTH_SHORT).show()
+//                        }
+//                    } else {
+//                        // 오류 처리
+//                        val errorBody = response.body?.string()
+//                        Toast.makeText(requireContext(), "Request failed: $errorBody", Toast.LENGTH_SHORT).show()
+//                    }
+//                }
+//            }
+//        })
 
         val url = "https://api.mywareho.me/v1/storages/issues/${itemId}/items"
 
@@ -354,7 +358,7 @@ class DashboardFragment : Fragment() {
             .post(requestBody) // POST 요청으로 변경
             .addHeader("Content-Type", "application/json") // JSON 형식 설정
             .build()
-
+        Log.d("chk123", "$itemId $issuePlanId")
         client.newCall(request).enqueue(object : okhttp3.Callback {
             override fun onFailure(call: okhttp3.Call, e: IOException) {
                 Log.e("Error", "Request failed: ${e.message}")
@@ -368,7 +372,7 @@ class DashboardFragment : Fragment() {
                     if (response.isSuccessful) {
                         Log.d("chk", "Response: ${response.body?.string()}")
                     } else {
-                        Log.d("chk", "Error response: ${response.body?.string()}")
+                        Log.d("chk", "Error response1: ${response.body?.string()}")
                         Toast.makeText(requireContext(), "Error: ${response.message}", Toast.LENGTH_SHORT).show()
                     }
                 }
