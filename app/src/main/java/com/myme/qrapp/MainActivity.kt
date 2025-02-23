@@ -6,6 +6,7 @@ import androidx.activity.viewModels
 import androidx.annotation.RequiresApi
 import com.google.android.material.bottomnavigation.BottomNavigationView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.Toolbar
 import androidx.navigation.findNavController
 import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.setupActionBarWithNavController
@@ -27,7 +28,12 @@ class MainActivity : AppCompatActivity() {
         val viewModel: SharedViewModel by viewModels()
         viewModel.setIsInbound(isInbound)
         val navView: BottomNavigationView = binding.navView
-        supportActionBar?.hide()
+        val toolbar: Toolbar = findViewById(R.id.toolbar)
+        val userName = intent.getStringExtra("userName")
+        val userRole = intent.getStringExtra("userRole")
+
+        binding.toolbarTitle.text  = "${userRole}-${userName}"
+        setSupportActionBar(toolbar)
         val navController = findNavController(R.id.nav_host_fragment_activity_main)
         navView.setupWithNavController(navController)
         if(!isInbound){

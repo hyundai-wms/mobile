@@ -91,6 +91,14 @@ class LoginActivity : AppCompatActivity() {
                                 val id = jsonObject.getString("id")  // 로그인 ID
                                 val role = jsonObject.getString("role")  // 사용자 역할
                                 intent.putExtra("userName",name)
+                                val roleDisplay = when (role) {
+                                    "MIDDLE_MANAGER" -> "중간 관리자"
+                                    "WMS_MANAGER" -> "창고 관리자"
+                                    "ADMIN" -> "총 관리자"
+                                    "WORKER" -> "일반 직원"
+                                    else -> role  // 그 외의 경우는 그대로 role 값 사용
+                                }
+                                intent.putExtra("userRole",roleDisplay)
                                 Log.d("chk", "userName: $name, userId: $userId, phoneNumber: $phoneNumber, id: $id, role: $role")
                             } catch (e: Exception) {
                                 Log.e("chk", "JSON 파싱 오류: ${e.message}")

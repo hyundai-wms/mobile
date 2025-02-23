@@ -15,6 +15,7 @@ import android.widget.TableLayout
 import android.widget.TableRow
 import android.widget.TextView
 import android.widget.Toast
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import com.google.zxing.BarcodeFormat
@@ -100,11 +101,15 @@ class DashboardFragment : Fragment() {
                     InboundProduct("$planId-$planCount")
                 }
             } else {
+                binding.btnInbound.text = "출고"
+                binding.btnReturn.text = "취소"
                 binding.btnReturn.setOnClickListener {
                     //TODO: 취소 버튼
                     //returnProduct("$planId-$planCount")
+                    sharedViewModel.qrCodeLiveData.value = ""
                 }
                 binding.btnInbound.setOnClickListener {
+
                     OutboundProduct("$planId")
                 }
             }
@@ -235,7 +240,17 @@ class DashboardFragment : Fragment() {
                         sharedViewModel.setQrCodeValue("")
                     } else {
 //                        Log.d("chk", "Error response: ${response.body?.string()}")
-                        Toast.makeText(requireContext(), "Error: ${response.body?.string()}", Toast.LENGTH_SHORT).show()
+                        try {
+                            val jsonObject = response.body?.string()?.let { JSONObject(it) }
+                            val message = jsonObject?.getString("message")
+                            if (message != null) {
+                                Log.d("Response", message)
+                            }  // message 값을 로그로 출력
+                            Toast.makeText(requireContext(), "${message}", Toast.LENGTH_SHORT).show()
+                        } catch (e: Exception) {
+                            Log.e("Error", "JSON 파싱 오류: ${e.message}")
+                        }
+
                     }
                 }
             }
@@ -266,7 +281,8 @@ class DashboardFragment : Fragment() {
             override fun onFailure(call: okhttp3.Call, e: IOException) {
                 Log.e("Error", "Request failed: ${e.message}")
                 requireActivity().runOnUiThread {
-                    Toast.makeText(requireContext(), "Request failed: ${e.message}", Toast.LENGTH_SHORT).show()
+                    Toast.makeText(requireContext(), "이미 처리된 상품입니다", Toast.LENGTH_SHORT).show()
+                    sharedViewModel.setQrCodeValue("")
                 }
             }
 
@@ -275,72 +291,23 @@ class DashboardFragment : Fragment() {
                     if (response.isSuccessful) {
                         Log.d("chk", "Response: ${response.body?.string()}")
                         Toast.makeText(requireContext(), "반품되었습니다", Toast.LENGTH_SHORT).show()
+                        sharedViewModel.setQrCodeValue("")
                     } else {
 //                        Log.d("chk", "Error response: ${response.body?.string()}")
-                        Toast.makeText(requireContext(), "Error: ${response.body?.string()}", Toast.LENGTH_SHORT).show()
+                        val jsonObject = response.body?.string()?.let { JSONObject(it) }
+                        val message = jsonObject?.getString("message")
+                        if (message != null) {
+                            Log.d("Response", message)
+                        }  // message 값을 로그로 출력
+                        Toast.makeText(requireContext(), "${message}", Toast.LENGTH_SHORT).show()
                     }
                 }
             }
         })
     }
-    //TODO: 출고 작업 url만 맞추고 그 이후로는 다시 맞춰야댐
+
     private fun OutboundProduct(itemId: String) {
-        Log.d("chk","$itemId")
-        val url1 = "https://api.mywareho.me/v1/storages/inventories/items/${itemId}"
         var issuePlanId = sharedViewModel.planId.value
-        // OkHttpClient에 CookieJar를 설정하여 쿠키를 관리
-        val client1 = OkHttpClient.Builder()
-            .cookieJar(MyCookieJar.INSTANCE)
-            .build()
-        val planId = sharedViewModel.planId.value
-        val jsonPlanId = """{"issuePlanId": "$planId"}"""  // JSON 문자열 생성
-        Log.d("chk","hey $planId")
-        val requestBodywithPlanId = jsonPlanId.toRequestBody("application/json".toMediaType()) // JSON을 RequestBody로 변환
-        Log.d("chk","hey2 $requestBodywithPlanId $jsonPlanId")
-//        val request1 = Request.Builder()
-//            .url(url1) // 이미 쿼리 파라미터가 추가된 URL
-//            .post(requestBodywithPlanId) // GET 방식으로 요청 (post를 사용하지 않고 쿼리 파라미터를 사용하면 GET 요청이 일반적)
-//            .addHeader("Content-Type", "application/json") // JSON 형식의 Content-Type 설정 (선택사항)
-//            .build()
-//
-//        client1.newCall(request1).enqueue(object : okhttp3.Callback {
-//            override fun onFailure(call: okhttp3.Call, e: IOException) {
-//                // 요청 실패 처리
-//                Log.e("Error", "Request failed: ${e.message}")
-//                requireActivity().runOnUiThread {
-//                    Toast.makeText(requireContext(), "Request failed: ${e.message}", Toast.LENGTH_SHORT).show()
-//                }
-//            }
-//            override fun onResponse(call: okhttp3.Call, response: Response) {
-//                requireActivity().runOnUiThread {
-//                    if (response.isSuccessful) {
-//                        // 응답 본문을 문자열로 받음
-//                        val responseBody = response.body?.string()
-//                        Log.d("chk", "Response: $responseBody")
-//
-//                        // JSONObject로 응답 파싱
-//                        try {
-//                            val jsonObject = JSONObject(responseBody)
-//
-//                            // "issuePlanId" 필드 추출
-//                            issuePlanId = jsonObject.optString("issuePlanId")
-//                            Log.d("chk", "issuePlanId: $issuePlanId")
-//
-//                            // issuePlanId 사용
-//                            // 예: displayItem(issuePlanId)
-//                            displayItem(issuePlanId)
-//                        } catch (e: Exception) {
-//                            Log.e("Error", "JSON parsing error: ${e.message}")
-//                            Toast.makeText(requireContext(), "JSON parsing error", Toast.LENGTH_SHORT).show()
-//                        }
-//                    } else {
-//                        // 오류 처리
-//                        val errorBody = response.body?.string()
-//                        Toast.makeText(requireContext(), "Request failed: $errorBody", Toast.LENGTH_SHORT).show()
-//                    }
-//                }
-//            }
-//        })
 
         val url = "https://api.mywareho.me/v1/storages/issues/${itemId}/items"
 
@@ -371,9 +338,16 @@ class DashboardFragment : Fragment() {
                 requireActivity().runOnUiThread {
                     if (response.isSuccessful) {
                         Log.d("chk", "Response: ${response.body?.string()}")
+                        Toast.makeText(requireContext(), "츨고되었습니다.", Toast.LENGTH_SHORT).show()
+                        sharedViewModel.qrCodeLiveData.value = ""
                     } else {
-                        Log.d("chk", "Error response1: ${response.body?.string()}")
-                        Toast.makeText(requireContext(), "Error: ${response.message}", Toast.LENGTH_SHORT).show()
+                        val jsonObject = response.body?.string()?.let { JSONObject(it) }
+                        val message = jsonObject?.getString("message")
+                        if (message != null) {
+                            Log.d("Response", message)
+                            Toast.makeText(requireContext(), "${message}", Toast.LENGTH_SHORT).show()
+                            sharedViewModel.qrCodeLiveData.value = ""
+                        }
                     }
                 }
             }
@@ -412,7 +386,6 @@ class DashboardFragment : Fragment() {
         Log.d("test","$response")
         if(response == ""){
             binding.OutboundPlanDate.text ="QR을 입력해주세요"
-
         } else{
             val jsonObject = JSONObject(response)
 
@@ -461,14 +434,16 @@ class DashboardFragment : Fragment() {
             imageView.setImageBitmap(bmp)
 
             val dialog = AlertDialog.Builder(requireContext())
-                .setTitle("QR Code-$bayNumber")
+                .setTitle("납품위치-$bayNumber")
                 .setView(imageView)
                 .setPositiveButton("닫기") { dialog, _ ->
                     dialog.dismiss()
                 }
                 .create()
             dialog.setCancelable(false)
+
             dialog.show()
+            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(ContextCompat.getColor(requireContext(), R.color.primary))
 
 
         } catch (e: Exception) {

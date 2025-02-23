@@ -2,6 +2,7 @@ package com.myme.qrapp
 
 import android.graphics.Bitmap
 import android.os.Bundle
+import android.util.Log
 import android.widget.ImageView
 import android.widget.LinearLayout
 import androidx.appcompat.app.AppCompatActivity
@@ -24,6 +25,7 @@ class QRCodeActivity : AppCompatActivity() {
         // itemCount 만큼 QR 코드 생성
         for (i in 1..itemCount) {
             val qrData = "$receiptPlanCode-$planId-$i"
+            Log.d("chk0","$qrData")
             val bitMatrix = generateQRCode(qrData)
             val bitmap = bitmapFromMatrix(bitMatrix)
 

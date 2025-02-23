@@ -6,15 +6,11 @@ import android.app.DatePickerDialog
 import android.content.Intent
 import android.os.Build
 import android.os.Bundle
-import android.os.StrictMode
 import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.widget.Button
-import android.widget.TableLayout
 import android.widget.TextView
-import android.widget.Toast
 import androidx.fragment.app.Fragment
 import com.myme.qrapp.MyCookieJar
 import com.myme.qrapp.R
@@ -25,12 +21,14 @@ import okhttp3.Response
 import org.json.JSONObject
 import java.io.IOException
 import java.util.*
-import android.widget.TableRow
 import androidx.annotation.RequiresApi
+import androidx.core.content.ContextCompat
 import androidx.fragment.app.activityViewModels
-import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.findNavController
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
 import com.myme.qrapp.SharedViewModel
+import com.myme.qrapp.databinding.FragmentNotificationsBinding
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 
@@ -38,178 +36,221 @@ import java.time.format.DateTimeFormatter
 class NotificationsFragment : Fragment() {
 
     private lateinit var selectedDate: String
-    private lateinit var selectDateButton: Button
+    private lateinit var selectDateButton: TextView
     private lateinit var selectedDateTextView: TextView
     private val sharedViewModel: SharedViewModel by activityViewModels()
-    private lateinit var root : View
+    private var _binding: FragmentNotificationsBinding? = null
+    private val binding get() = _binding!!
+    private lateinit var productAdapter: ProductAdapter
+    private val productList = mutableListOf<ProductItem>()
+
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View {
-        root = inflater.inflate(R.layout.fragment_notifications, container, false)
+        _binding = FragmentNotificationsBinding.inflate(inflater, container, false)
+        val root = binding.root
 
-        selectDateButton = root.findViewById(R.id.selectDateButton)
-        selectedDateTextView = root.findViewById(R.id.selectedDateTextView)
-        StrictMode.enableDefaults()
+        selectDateButton = binding.selectDateButton
+        selectedDateTextView = binding.selectedDateTextView
+
+        productAdapter = ProductAdapter(productList, sharedViewModel) { planId ->
+            showConfirmationDialog(planId)
+        }
+        binding.recyclerView.apply {
+            layoutManager = LinearLayoutManager(requireContext())
+            adapter = productAdapter
+        }
+
         selectDateButton.setOnClickListener {
             showDatePickerDialog()
         }
-        if(sharedViewModel.isInbound.value == false){
-            val today = LocalDate.now() // 현재 날짜 가져오기
-            val formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd") // 포맷 지정
-            val formattedDate = today.format(formatter) // 날짜를 문자열로 변환
-            val url = "https://api.mywareho.me/v1/storages/issues/plans?issuePlanStartDate=$formattedDate&issuePlanEndDate=$formattedDate"
+
+        if (!sharedViewModel.isInbound.value!!) {
+            val today = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+//            val url = "https://api.mywareho.me/v1/storages/issues/plans?issuePlanStartDate=$today&issuePlanEndDate=$today"
+            val url ="https://api.mywareho.me/v1/storages/issues/today"
+            Log.d("chk","$today, $url")
+            selectedDateTextView.text = "선택된 날짜: $today"
             sendRequestWithSelectedDate(url)
         }
-        Log.d("chk","!!!!!!!!!!")
+
         return root
     }
 
     private fun showDatePickerDialog() {
         val calendar = Calendar.getInstance()
-        val year = calendar.get(Calendar.YEAR)
-        val month = calendar.get(Calendar.MONTH)
-        val dayOfMonth = calendar.get(Calendar.DAY_OF_MONTH)
-
         val datePickerDialog = DatePickerDialog(
             requireContext(),
-            { _, selectedYear, selectedMonth, selectedDay ->
-                val formattedDate = String.format("%04d-%02d-%02d", selectedYear, selectedMonth + 1, selectedDay)
-                selectedDate = formattedDate
-                selectedDateTextView.text = "Selected Date: $formattedDate"
-                if(sharedViewModel.isInbound.value == false){
-                    val url = "https://api.mywareho.me/v1/storages/issues/plans?issuePlanStartDate=$selectedDate&issuePlanEndDate=$selectedDate"
-                    sendRequestWithSelectedDate(url)
-                }else{
-                    val url = "https://api.mywareho.me/v1/storages/receipts/plans?receiptPlanStartDate=$selectedDate&receiptPlanEndDate=$selectedDate"
-                    sendRequestWithSelectedDate(url)
-                }
+            { _, year, month, day ->
+                selectedDate = String.format("%04d-%02d-%02d", year, month + 1, day)
+                selectedDateTextView.text = "선택된 날짜: $selectedDate"
+                val url = if (sharedViewModel.isInbound.value == true)
+                    "https://api.mywareho.me/v1/storages/receipts/plans?receiptPlanStartDate=$selectedDate&receiptPlanEndDate=$selectedDate"
+                else
+                    "https://api.mywareho.me/v1/storages/issues/plans?issuePlanStartDate=$selectedDate&issuePlanEndDate=$selectedDate"
+//                val url = if (sharedViewModel.isInbound.value == true) "https://api.mywareho.me/v1/storages/receipts/today" else "https://api.mywareho.me/v1/storages/issues/today"
+                sendRequestWithSelectedDate(url)
             },
-            year, month, dayOfMonth
+            calendar.get(Calendar.YEAR),
+            calendar.get(Calendar.MONTH),
+            calendar.get(Calendar.DAY_OF_MONTH)
         )
         datePickerDialog.show()
     }
 
-    private fun sendRequestWithSelectedDate(url : String) {
-
-        // OkHttpClient에 CookieJar를 설정하여 쿠키를 관리
-        val client = OkHttpClient.Builder()
-            .cookieJar(MyCookieJar.INSTANCE)
-            .build()
-
-        val request = Request.Builder()
-            .url(url) // 이미 쿼리 파라미터가 추가된 URL
-            .get() // GET 방식으로 요청 (post를 사용하지 않고 쿼리 파라미터를 사용하면 GET 요청이 일반적)
-            .addHeader("Content-Type", "application/json") // JSON 형식의 Content-Type 설정 (선택사항)
-            .build()
+    private fun sendRequestWithSelectedDate(url: String) {
+        val client = OkHttpClient.Builder().cookieJar(MyCookieJar.INSTANCE).build()
+        val request = Request.Builder().url(url).get().build()
 
         client.newCall(request).enqueue(object : okhttp3.Callback {
             override fun onFailure(call: okhttp3.Call, e: IOException) {
-                // 요청 실패 처리
                 Log.e("Error", "Request failed: ${e.message}")
-
             }
 
             override fun onResponse(call: okhttp3.Call, response: Response) {
                 requireActivity().runOnUiThread {
-                    if (response.isSuccessful) {
-                        // 응답 처리
-//                        Log.d("chk", "Response: ${response.body?.string()}")
-                        if(sharedViewModel.isInbound.value == true){
-                            response.body?.string()?.let { displayReceiptPlans(it) }
-                        } else{
-                            response.body?.string()?.let { displayReceiptPlans(it) }
-                        }
-
-
-                    } else {
-                        // 오류 처리
-                        Log.d("chk", "Error response: ${response.body?.string()}")
-                    }
+                    response.body?.string()?.let { if(url.endsWith("today")){parseResponse2(it)} else{
+                        parseResponse(it)
+                    } }
                 }
             }
         })
     }
 
-    private fun displayReceiptPlans(response: String) {
+    private fun parseResponse(response: String) {
         val jsonObject = JSONObject(response)
         val content = jsonObject.getJSONArray("content")
-
-        // TableLayout에 데이터를 동적으로 추가
-        val tableLayout = root.findViewById<TableLayout>(R.id.tableLayout)
-        tableLayout.removeAllViews()  // 기존 뷰 제거
-
+        productList.clear()
         for (i in 0 until content.length()) {
             val item = content.getJSONObject(i)
-            if(sharedViewModel.isInbound.value==true){
-                val receiptPlanCode = item.getString("receiptPlanCode")
-                val receiptPlanId = item.getString("receiptPlanId")
-                val productNumber = item.getString("productNumber")
-                val productName = item.getString("productName")
-                val itemCount = item.getInt("itemCount")
 
-                // 행 생성
-                val tableRow = TableRow(requireContext())
+            val planId = if (sharedViewModel.isInbound.value == true) item.getString("receiptPlanId") else item.getString("issuePlanId")
+            Log.d("chk","$item $planId")
 
-                // 각 셀에 텍스트 추가
-                val productNumberTextView = TextView(requireContext()).apply { text = productNumber }
-                val productNameTextView = TextView(requireContext()).apply { text = productName }
-                val itemCountTextView = TextView(requireContext()).apply { text = itemCount.toString() }
+                productList.add(
+                    ProductItem(
+                        receiptPlanCode = if (sharedViewModel.isInbound.value == true) item.getString("receiptPlanCode") else item.getString("issuePlanCode"),
+                        productNumber = item.getString("productNumber"),
+                        productName = item.getString("productName"),
+                        itemCount = item.getInt("itemCount"),
+                        planId = planId
+                    )
+                )
+        }
+        if(productList.size!=0){
+            binding.recyclerView.visibility = View.VISIBLE
+            binding.nonePlanText.visibility = View.GONE
+        } else {
+            binding.recyclerView.visibility = View.GONE
+            binding.nonePlanText.visibility = View.VISIBLE
+        }
+        binding.topLayout.visibility = View.VISIBLE
+        productAdapter.notifyDataSetChanged()
+    }
+    private fun parseResponse2(response: String) {
+        val jsonObject = JSONObject(response)
+        val content = jsonObject.getJSONArray("content")
+        productList.clear()
+        for (i in 0 until content.length()) {
+            val item = content.getJSONObject(i)
 
-                // 클릭 이벤트 추가: 셀 클릭 시 QR 코드 생성 화면으로 이동
-//            if(sharedViewModel.isInbound.value == true) {
-//
-//            }
-                tableRow.setOnClickListener {
-                    val intent = Intent(requireContext(), QRCodeActivity::class.java)
-                    intent.putExtra("receiptPlanCode", receiptPlanCode)
-                    intent.putExtra("itemCount", itemCount)
-                    intent.putExtra("receiptPlanId",receiptPlanId)
-                    startActivity(intent)
-                }
-
-                tableRow.addView(productNumberTextView)
-                tableRow.addView(productNameTextView)
-                tableRow.addView(itemCountTextView)
-                tableLayout.addView(tableRow)
-            } else{
-                val issuePlanCode = item.getString("issuePlanCode")
-                val issuePlanId = item.getString("issuePlanId")
-                val productNumber = item.getString("productNumber")
-                val productName = item.getString("productName")
-                val itemCount = item.getInt("itemCount")
-
-                // 행 생성
-                val tableRow = TableRow(requireContext())
-
-                // 각 셀에 텍스트 추가
-                val productNumberTextView = TextView(requireContext()).apply { text = productNumber }
-                val productNameTextView = TextView(requireContext()).apply { text = productName }
-                val itemCountTextView = TextView(requireContext()).apply { text = itemCount.toString() }
-
-
-                tableRow.addView(productNumberTextView)
-                tableRow.addView(productNameTextView)
-                tableRow.addView(itemCountTextView)
-                tableLayout.addView(tableRow)
-
-                tableRow.setOnClickListener {
-                    AlertDialog.Builder(requireContext())
-                        .setTitle("출고 진행")
-                        .setMessage("출고를 진행하시겠습니까?")
-                        .setPositiveButton("확인") { _, _ ->
-                            // ViewModel에 issuePlanId 저장
-                            sharedViewModel.setPlanId(issuePlanId)
-
-                            // HomeFragment로 이동
-                            findNavController().navigate(R.id.action_navigation_notifications_to_navigation_home)
-                        }
-                        .setNegativeButton("취소", null) // 취소 버튼
-                        .show()
-                }
+            val planId = if (sharedViewModel.isInbound.value == true) item.getString("receiptPlanId") else item.getString("issuePlanId")
+            Log.d("chk","$item $planId")
+            if(item.getString("issueStatus") != "DONE"){
+                productList.add(
+                    ProductItem(
+                        receiptPlanCode = if (sharedViewModel.isInbound.value == true) item.getString("receiptPlanCode") else item.getString("issuePlanCode"),
+                        productNumber = item.getString("productNumber"),
+                        productName = item.getString("productName"),
+                        itemCount = item.getInt("totalItemCount"),
+                        planId = planId
+                    )
+                )
             }
 
+
         }
+        if(productList.size!=0){
+            binding.recyclerView.visibility = View.VISIBLE
+            binding.nonePlanText.visibility = View.GONE
+        } else {
+            binding.recyclerView.visibility = View.GONE
+            binding.nonePlanText.visibility = View.VISIBLE
+        }
+        binding.topLayout.visibility = View.VISIBLE
+        productAdapter.notifyDataSetChanged()
+    }
+
+    private fun showConfirmationDialog(planId: String) {
+        val dialog = AlertDialog.Builder(requireContext())
+            .setTitle("출고 진행")
+            .setMessage("출고를 진행하시겠습니까?")
+            .setPositiveButton("확인") { _, _ ->
+                sharedViewModel.setPlanId(planId)
+                findNavController().navigate(R.id.action_navigation_notifications_to_navigation_home)
+            }
+            .setNegativeButton("취소", null)
+            .create()
+
+
+
+        dialog.show()
+        // Positive button 색상 설정
+        dialog.getButton(AlertDialog.BUTTON_POSITIVE).setTextColor(ContextCompat.getColor(requireContext(), R.color.primary))
+
+        // Negative button 색상 설정
+        dialog.getButton(AlertDialog.BUTTON_NEGATIVE).setTextColor(ContextCompat.getColor(requireContext(), R.color.primary))
     }
 }
+
+class ProductAdapter(
+    private val products: List<ProductItem>,
+    private val viewModel: SharedViewModel,
+    private val onItemClick: (String) -> Unit
+) : RecyclerView.Adapter<ProductAdapter.ProductViewHolder>() {
+
+    inner class ProductViewHolder(view: View) : RecyclerView.ViewHolder(view) {
+        val productNumber: TextView = view.findViewById(R.id.tvProductNumber)
+        val productName: TextView = view.findViewById(R.id.tvProductName)
+        val itemCount: TextView = view.findViewById(R.id.tvItemCount)
+    }
+
+    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ProductViewHolder {
+        val view = LayoutInflater.from(parent.context).inflate(R.layout.row_item, parent, false)
+        return ProductViewHolder(view)
+    }
+
+    override fun onBindViewHolder(holder: ProductViewHolder, position: Int) {
+        val product = products[position]
+        holder.productNumber.text = product.productNumber
+        holder.productName.text = product.productName
+        holder.itemCount.text = product.itemCount.toString()
+
+        holder.itemView.setOnClickListener {
+            // sharedViewModel의 isInbound 값 확인
+            if (viewModel.isInbound.value == true) {
+                val intent = Intent(holder.itemView.context, QRCodeActivity::class.java)
+                intent.putExtra("receiptPlanCode", product.receiptPlanCode) // receiptPlanCode는 예시로, 실제 필요한 값을 넣어주세요
+                intent.putExtra("itemCount", product.itemCount)
+                intent.putExtra("receiptPlanId", product.planId)
+                holder.itemView.context.startActivity(intent)
+            } else {
+                // isInbound가 false일 경우 다른 처리 필요하면 여기에 추가
+                onItemClick(product.planId)
+            }
+        }
+    }
+
+    override fun getItemCount(): Int = products.size
+}
+
+data class ProductItem(
+    val productNumber: String,
+    val productName: String,
+    val itemCount: Int,
+    val planId: String,
+    val receiptPlanCode: String
+)
+

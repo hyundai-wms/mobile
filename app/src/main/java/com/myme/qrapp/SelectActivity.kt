@@ -21,19 +21,23 @@ class SelectActivity : AppCompatActivity() {
         supportActionBar?.hide()
 
         val userName = intent.getStringExtra("userName")
+        val userRole = intent.getStringExtra("userRole")
         val intent = Intent(this@SelectActivity, MainActivity::class.java)
         Log.d("chk","$userName")
         binding.welcomeText.text ="환영합니다 ${userName} 님"
         binding.btnEnterInbound.setOnClickListener {
             intent.putExtra("isInbound",true)
+            intent.putExtra("userName",userName)
+            intent.putExtra("userRole",userRole)
             startActivity(intent)
             finish()
         }
         binding.btnEnterOutbound.setOnClickListener {
             intent.putExtra("isInbound",false)
+            intent.putExtra("userName",userName)
+            intent.putExtra("userRole",userRole)
             startActivity(intent)
             finish()
         }
-
     }
 }

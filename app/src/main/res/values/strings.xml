@@ -1,10 +1,14 @@
 <resources>
-    <string name="app_name">QrApp</string>
+    <string name="app_name">MyWareHome</string>
     <string name="title_home">QR인식</string>
-    <string name="title_dashboard">조회</string>
-    <string name="title_notifications">QR생성</string>
-    <string name="text_inbound">등록</string>
+    <string name="title_dashboard">물품처리</string>
+    <string name="title_notifications">일정조회</string>
+    <string name="text_inbound">입고</string>
+    <string name="text_outbound">출고</string>
     <string name="text_return">반품</string>
+    <string name="text_back">취소</string>
+    <string name="text_date">날짜선택</string>
+    <string name="text_checkingdate">선택된 날짜</string>
     <!-- TODO: Remove or change this placeholder text -->
     <string name="hello_blank_fragment">Hello blank fragment</string>
     <string name="enterOutbound">출고 처리</string>

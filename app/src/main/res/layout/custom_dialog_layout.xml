@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    android:padding="16dp">
+
+    <!-- 이미지 뷰 -->
+    <ImageView
+        android:id="@+id/dialogImageView"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+         />
+
+    <!-- 텍스트 뷰 1 -->
+    <TextView
+        android:id="@+id/dialogTextView1"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="첫 번째 텍스트"
+        android:paddingTop="16dp"
+        android:textSize="16sp" />
+
+    <!-- 텍스트 뷰 2 -->
+    <TextView
+        android:id="@+id/dialogTextView2"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="두 번째 텍스트"
+        android:paddingTop="8dp"
+        android:textSize="16sp" />
+</LinearLayout>
