@@ -31,7 +31,8 @@ import com.myme.qrapp.SharedViewModel
 import com.myme.qrapp.databinding.FragmentNotificationsBinding
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
-
+@RequiresApi(Build.VERSION_CODES.O)
+val today = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
 
 class NotificationsFragment : Fragment() {
 
@@ -43,7 +44,6 @@ class NotificationsFragment : Fragment() {
     private val binding get() = _binding!!
     private lateinit var productAdapter: ProductAdapter
     private val productList = mutableListOf<ProductItem>()
-
     @RequiresApi(Build.VERSION_CODES.O)
     override fun onCreateView(
         inflater: LayoutInflater, container: ViewGroup?,
@@ -68,7 +68,7 @@ class NotificationsFragment : Fragment() {
         }
 
         if (!sharedViewModel.isInbound.value!!) {
-            val today = LocalDate.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd"))
+
 //            val url = "https://api.mywareho.me/v1/storages/issues/plans?issuePlanStartDate=$today&issuePlanEndDate=$today"
             val url ="https://api.mywareho.me/v1/storages/issues/today"
             Log.d("chk","$today, $url")
@@ -222,6 +222,7 @@ class ProductAdapter(
         return ProductViewHolder(view)
     }
 
+    @RequiresApi(Build.VERSION_CODES.O)
     override fun onBindViewHolder(holder: ProductViewHolder, position: Int) {
         val product = products[position]
         holder.productNumber.text = product.productNumber
@@ -235,10 +236,18 @@ class ProductAdapter(
                 intent.putExtra("receiptPlanCode", product.receiptPlanCode) // receiptPlanCode는 예시로, 실제 필요한 값을 넣어주세요
                 intent.putExtra("itemCount", product.itemCount)
                 intent.putExtra("receiptPlanId", product.planId)
+                intent.putExtra("date",today)
+                intent.putExtra("pn",product.productNumber)
+                intent.putExtra("planId","")
                 holder.itemView.context.startActivity(intent)
             } else {
                 // isInbound가 false일 경우 다른 처리 필요하면 여기에 추가
-                onItemClick(product.planId)
+//                onItemClick(product.planId)
+                val intent = Intent(holder.itemView.context, QRCodeActivity::class.java)
+                intent.putExtra("planId",product.planId)
+                intent.putExtra("date",today)
+                intent.putExtra("pn",product.productNumber)
+                holder.itemView.context.startActivity(intent)
             }
         }
     }
